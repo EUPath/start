@@ -1,0 +1,326 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>나의 시작점 찾기</title><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<style>
+/* 가이드북 웹판과 같은 디자인 (SLIDE_STYLE.md, design/web/ch01.html): 흰 배경, 검은 글, 회색 보조,
+   카드·상자 없음, 작은 회색 라벨 위 큰 글 (두 단 라벨), 핵심 단어에만 형광펜. 파랑 = 문(시작점), 주황 = 돈.
+   한 화면에 질문 하나, 맨 위 얇은 선이 진행만큼 찬다 */
+:root {
+  --ink: #000000; --grey: #7F7F7F; --line: #D9D9D9; --blue: #83CBEB; --orange: #F2AA84; --err: #B3402F;
+  color-scheme: light;
+}
+[hidden]:not([hidden=until-found i]) { display: none !important; }
+* { box-sizing: border-box; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; background: #FFFFFF; color: var(--ink); font-family: "Pretendard", "Montserrat", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 17px; line-height: 1.85; padding: max(40px, env(safe-area-inset-top)) 16px max(64px, env(safe-area-inset-bottom)); }
+.wrap { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+mark, .hl { background: var(--blue); color: inherit; padding: 0 4px; }
+
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand b { font-size: 17px; font-weight: 700; }
+.brand span { font-size: 13px; color: var(--grey); }
+
+/* 진행 선: 회색 선 위 검은 선이 찬다. 시작 표시는 파란 점 */
+.route { position: relative; height: 10px; }
+.route .track, .route .fill { position: absolute; left: 0; top: 4px; height: 1px; }
+.route .track { right: 0; background: var(--line); }
+.route .fill { background: var(--ink); width: 0; height: 2px; top: 3.5px; transition: width .35s ease; }
+.route .pin { position: absolute; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); transform: translateX(-5px); transition: left .35s ease; }
+.step-no { font-size: 13px; color: var(--grey); font-variant-numeric: tabular-nums; }
+
+.card { display: flex; flex-direction: column; gap: 20px; }
+h1 { font-weight: 700; font-size: clamp(26px, 6vw, 30px); line-height: 1.35; margin: 0; text-wrap: balance; }
+h2 { font-weight: 700; font-size: 22px; line-height: 1.45; margin: 0; text-wrap: balance; }
+h1:focus, h2:focus { outline: none; } /* 화면이 바뀔 때 제목에 focus를 옮김 (화면 읽기용), 테두리는 안 보이게 */
+.lede { margin: 0; }
+.quote { margin: 24px 0; text-align: center; font-size: 22px; line-height: 1.6; }
+.quote small { display: block; font-size: 13px; color: var(--grey); margin-bottom: 4px; font-family: "Montserrat", sans-serif; }
+.row-label { font-size: 13px; color: var(--grey); margin: 8px 0 -14px; }
+.hint { font-size: 15px; color: var(--grey); margin: -12px 0 0; line-height: 1.7; }
+
+/* 선택지: 상자 없이 줄로 나눈 목록. 고르면 글자에 형광펜 */
+.opts { display: flex; flex-direction: column; }
+.opt { position: relative; border-bottom: 1px solid var(--line); }
+.opt:first-child { border-top: 1px solid var(--line); }
+.opt input { position: absolute; opacity: 0; inset: 0; }
+.opt label { display: flex; gap: 14px; align-items: center; padding: 13px 2px; cursor: pointer; line-height: 1.5; }
+.opt label::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--grey); }
+.opt input[type="checkbox"] + label::before { border-radius: 3px; }
+.opt input:checked + label { font-weight: 700; }
+.opt input:checked + label::before { border-color: var(--ink); background: var(--ink); box-shadow: inset 0 0 0 3px #FFFFFF; }
+.opt input:focus-visible + label { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+textarea, input[type="email"], input[type="text"], select { width: 100%; font: inherit; color: var(--ink); background: transparent;
+  border: 0; border-bottom: 1px solid var(--grey); border-radius: 0; padding: 10px 2px; }
+select { cursor: pointer; }
+textarea { min-height: 96px; resize: vertical; line-height: 1.7; }
+textarea:focus-visible, input[type="email"]:focus-visible, input[type="text"]:focus-visible, select:focus-visible { outline: none; border-bottom: 2px solid var(--ink); }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.7; color: var(--grey); }
+.check input { margin-top: 6px; accent-color: #000000; }
+
+.nav { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 8px; }
+button { font: inherit; font-size: 16px; font-weight: 700; border-radius: 999px; padding: 10px 24px; cursor: pointer; border: 1px solid transparent; }
+.primary { background: var(--ink); color: #FFFFFF; }
+.primary:disabled { background: var(--line); color: #FFFFFF; cursor: default; }
+.ghost { background: transparent; color: var(--grey); padding-inline: 4px; font-weight: 400; }
+button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.err { color: var(--err); font-size: 14px; margin: 0; }
+
+/* 결과: 상자 없이 두 단 라벨과 여백으로 나눈다 */
+.read { font-size: 15px; color: var(--grey); margin: 0; line-height: 1.7; }
+.read b { display: block; font-size: 13px; font-weight: 400; margin-bottom: 2px; }
+.read span { color: var(--ink); }
+.map { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.map li { display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 1.45; color: var(--grey); min-width: 0; border-top: 2px solid var(--line); padding-top: 8px; }
+.map li .k { font-size: 12px; }
+.map li.now { color: var(--ink); font-weight: 700; border-top-color: var(--ink); }
+.map li.now .k::after { content: " · 지금"; }
+.map li.next { color: var(--ink); border-top: 2px dashed var(--ink); }
+.map li.next .k::after { content: " · 그다음"; }
+@media (max-width: 480px) { .map { grid-template-columns: repeat(2, 1fr); } }
+.start { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.start h2 { font-size: clamp(24px, 5.5vw, 30px); line-height: 1.4; }
+.start .lede { color: var(--grey); font-size: 16px; }
+.eyebrow { font-size: 13px; color: var(--grey); }
+
+.result-list { display: flex; flex-direction: column; gap: 22px; margin: 8px 0 0; padding: 0; list-style: none; }
+.result-list li { display: grid; grid-template-columns: 24px 1fr; gap: 8px; align-items: start; }
+.result-list .n { font-size: 13px; color: var(--grey); padding-top: 4px; font-family: "Montserrat", sans-serif; }
+.result-list b { display: block; font-size: 18px; }
+.result-list p { margin: 2px 0 0; }
+
+.worries { display: flex; flex-direction: column; gap: 18px; margin-top: 12px; }
+.worries .w b { display: block; font-size: 18px; }
+.worries .w p { margin: 2px 0 0; }
+.worries .w .ch { font-size: 14px; color: var(--grey); }
+
+.locked { margin-top: 20px; display: flex; flex-direction: column; gap: 2px; }
+.locked b { font-size: 22px; line-height: 1.45; }
+.locked a { color: var(--ink); font-weight: 700; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.steps li { display: flex; gap: 12px; align-items: center; color: var(--grey); opacity: .4; transition: opacity .3s; }
+.steps li::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--grey); }
+.steps li.on { opacity: 1; color: var(--ink); }
+.steps li.ok { opacity: 1; }
+.steps li.on::before { border-color: var(--ink); background: var(--blue); animation: pulse .9s ease-in-out infinite alternate; }
+.steps li.ok::before { animation: none; border-color: var(--ink); background: var(--ink); }
+@keyframes pulse { to { transform: scale(1.4); } }
+@media (prefers-reduced-motion: reduce) { .route .fill, .route .pin { transition: none; } .steps li.on::before { animation: none; } }
+</style></head><body>
+
+<div class="wrap">
+    <div class="brand"><b>시작점</b><span>유럽 석·박사 진학 · 독일 뇌과학 박사</span></div>
+
+  <div class="route" aria-hidden="true"><div class="track"></div><div class="fill" id="fill"></div><div class="pin" id="pin" style="left:0"></div></div>
+
+  <form id="f" novalidate>
+    <!-- intro -->
+    <section class="card" data-step="intro">
+      <h1>유럽 대학원, 나는 어디서 시작하면 될까요?</h1>
+      <p class="quote"><small>Everyone needs somewhere to start.</small>누구나 <mark>시작할 곳</mark>은 필요하니까요.</p>
+      <p class="lede">질문 12개 안팎, 3분이면 끝납니다. 끝나면 바로 내 시작점과 그다음 길을 보여 드리고, 같은 내용을 메일로도 보내 드립니다. 무료입니다.</p>
+      <div class="nav"><span class="step-no">약 3분</span><button type="button" class="primary" data-next>시작하기</button></div>
+    </section>
+
+    <div id="qs"></div>
+
+    <!-- email + consent -->
+    <section class="card" data-step="email" hidden>
+      <span class="step-no" data-count></span>
+      <h2>결과를 받을 이메일을 알려 주세요</h2>
+      <p class="hint">결과를 이 주소로 바로 보내 드립니다. 고민을 적어 주셨다면 직접 읽고, 덧붙일 말이 있으면 따로 답장 드립니다. 응답은 이메일 하나당 한 번만 받습니다.</p>
+      <input type="text" id="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
+      <input type="email" id="email" placeholder="name@example.com" autocomplete="email">
+      <label class="check"><input type="checkbox" id="c1"><span>(필수) 결과 메일 발송과 서비스 개선을 위해 응답과 이메일을 보관하는 데 동의합니다. 요청하면 언제든 삭제합니다.</span></label>
+      <label class="check"><input type="checkbox" id="c2"><span>(선택) 가이드북이 나오면 알림을 받고, 이후 업데이트와 소식도 메일로 받겠습니다.</span></label>
+      <p class="err" id="emailErr" hidden></p>
+      <div class="nav"><button type="button" class="ghost" data-back>이전</button><button type="submit" class="primary" id="sendBtn">보내기</button></div>
+    </section>
+
+    <!-- analyzing: 결과 전 약 4초. 실제로 쓰는 응답만 단계로 보여 준다 -->
+    <section class="card" data-step="analyzing" hidden aria-live="polite">
+      <h2>분석 중이에요</h2>
+      <ol class="steps" id="aSteps"><li>단계와 연구 경험 확인</li><li>출발 시기와 돈 조건 대조</li><li>막막한 것에 맞는 장 찾기</li></ol>
+    </section>
+
+    <!-- result -->
+    <section class="card" data-step="done" hidden>
+      <span class="step-no">완료</span>
+      <p class="read"><b>적어 주신 상황</b><span id="rRead"></span></p>
+      <ol class="map" id="rMap" aria-label="시작점 넷"></ol>
+      <div class="start">
+        <span class="eyebrow">지금 시작점</span>
+        <h2 id="rTitle"></h2>
+        <p id="rWho" class="lede"></p>
+      </div>
+      <ol class="result-list" id="rList"></ol>
+      <div class="worries" id="rWorries" hidden><span class="eyebrow">막막하다고 고른 것</span></div>
+      <div class="locked"><b id="rCtaT"></b><span id="rCtaP"></span></div>
+      <p class="hint" id="sendNote" style="margin:0"></p>
+      <p class="hint">시작점은 등급이 아닙니다. 어디서 시작하든 다음 시작점으로 이어집니다.</p>
+      <div class="nav"><button type="button" class="ghost" id="restart">처음부터 다시</button></div>
+    </section>
+  </form>
+
+</div>
+
+<script src="rules.js"></script>
+<script>
+// 답을 만드는 규칙(START, startOf, answerOf 등)은 rules.js. Apps Script도 같은 파일을 쓴다
+const Q = [
+  { id: "stage", t: "지금 어떤 단계에 있나요?", type: "one", o: ["학부 1~2학년", "학부 3~4학년", "학부 졸업, 일하는 중", "석사 과정 중", "석사 졸업 이상"] },
+  { id: "goal", t: "유럽에서 하고 싶은 건 무엇인가요?", type: "one", o: ["석사", "박사", "둘 다 생각 중", "아직 모르겠어요"] },
+  { id: "field", t: "유럽에서 공부하고 싶은 분야와 지금 전공을 알려 주세요", type: "pair",
+    rows: [{ id: "field", label: "공부하고 싶은 분야", o: ["신경과학", "인지과학·심리", "생명과학", "공학·AI", "아직 넓게 보고 있어요"] },
+           { id: "major", label: "지금(또는 마지막) 전공", o: ["생명·의약", "심리·인지", "공학·컴퓨터", "물리·화학·수학", "인문·사회", "기타"] }],
+    text: { id: "majorName", label: "정확한 전공 이름", hint: "영어 표기를 알면 함께 적어 주세요.", ph: "예: 생명과학과 (Life Science)" } },
+  { id: "why", t: "분야를 바꾸고 싶은 이유를 한 줄로 적어 주세요", hint: "지금 전공과 다른 분야를 고른 분께만 묻습니다. 선택입니다.", type: "text", ph: "예: 학부 때 뇌 수업을 듣고 계속 관심이 갔어요", when: a => a.major && a.field && !sameArea(a.major, a.field) },
+  { id: "lab", t: "연구해 본 경험은 어느 정도인가요?", type: "one", o: ["아직 없어요", "수업 프로젝트 정도", "연구실 6개월 미만", "연구실 6개월~1년", "연구실 1년 이상", "논문이나 학회 발표까지"] },
+  { id: "phdBase", t: "석사 논문 주제가 가고 싶은 분야와 이어지나요?", hint: "박사를 생각하는 분께만 묻습니다.", type: "one", o: ["거의 같아요", "일부 이어져요", "거의 달라요", "석사가 없어요"], when: a => a.goal === "박사" || a.goal === "둘 다 생각 중" },
+  { id: "country", t: "관심 있는 나라를 모두 골라 주세요", type: "many", o: ["독일", "이탈리아", "네덜란드", "스위스", "오스트리아", "프랑스", "북유럽", "영국", "미국", "호주", "기타", "아직 모르겠어요"] },
+  { id: "when", t: "언제쯤 출발하고 싶나요?", type: "one", o: ["6개월 안", "1년 안", "1~2년 안", "2년 뒤", "아직 정하지 않았어요"] },
+  { id: "money", t: "학비와 생활비는 어떻게 생각하고 있나요?", type: "one", o: ["스스로 감당할 수 있어요", "일부는 지원이 필요해요", "장학금이나 월급이 꼭 있어야 해요"] },
+  { id: "worry", t: "지금 가장 막막한 것을 두 개까지 골라 주세요", type: "many", max: 2, o: ["어디서부터 시작할지", "나에게 맞는 학교나 연구실 찾기", "지원 서류", "교수님께 연락하기", "돈", "영어", "가족이나 주변 설득"] },
+  { id: "first", t: "유학 생각이 문득 났을 때, 보통 먼저 하는 것을 모두 골라 주세요", type: "many", o: ["네이버나 구글에 검색해요", "유튜브를 찾아봐요", "ChatGPT 같은 AI에게 물어봐요", "커뮤니티나 카페에 글을 찾아봐요", "Threads나 인스타그램을 봐요", "아는 사람에게 연락해요", "생각만 하고 넘어가요"] },
+  { id: "help", t: "도움을 받는다면 어떤 방식이 가장 편한가요?", type: "one", o: ["정리된 자료를 혼자 읽고 싶어요", "내 상황에 맞춘 답을 글로 받고 싶어요", "직접 대화하며 바로 묻고 싶어요", "웬만한 건 혼자 찾아볼 수 있어요"] },
+  { id: "note", t: "지금 고민을 한두 줄로 적어 주세요", hint: "선택입니다. 적어 주신 고민은 모아서 가이드북과 앞으로의 안내를 만드는 데 씁니다.", type: "text", ph: "예: 생물학 전공인데 신경과학 박사가 가능할지 모르겠어요" }
+];
+
+const qs = document.getElementById("qs");
+const ans = {};
+Q.forEach(q => {
+  const s = document.createElement("section");
+  s.className = "card"; s.dataset.step = q.id; s.hidden = true;
+  let body = "";
+  if (q.type === "year") {
+    const ys = []; for (let y = 2008; y >= 1980; y--) ys.push(y);
+    body = `<select id="q_${q.id}"><option value="">선택해 주세요</option>${ys.map(y => `<option>${y}</option>`).join("")}<option value="1979 이전">1979년 이전</option><option value="밝히지 않음">밝히고 싶지 않아요</option></select>`;
+  } else if (q.type === "text") {
+    body = `<textarea id="q_${q.id}" placeholder="${q.ph || ""}"></textarea>`;
+  } else if (q.type === "pair") {
+    body = q.rows.map(r => `<p class="row-label">${r.label}</p><div class="opts">${r.o.map((o, i) => `<div class="opt"><input type="radio" name="${r.id}" id="${r.id}_${i}" value="${o}"><label for="${r.id}_${i}">${o}</label></div>`).join("")}</div>`).join("")
+      + (q.text ? `<p class="row-label">${q.text.label}</p><p class="hint" style="margin:0">${q.text.hint}</p><input type="text" id="q_${q.text.id}" placeholder="${q.text.ph}">` : "");
+  } else {
+    const kind = q.type === "many" ? "checkbox" : "radio";
+    body = `<div class="opts">${q.o.map((o, i) => `<div class="opt"><input type="${kind}" name="${q.id}" id="${q.id}_${i}" value="${o}"><label for="${q.id}_${i}">${o}</label></div>`).join("")}</div>`;
+  }
+  s.innerHTML = `<span class="step-no" data-count></span><h2>${q.t}</h2>${q.hint ? `<p class="hint">${q.hint}</p>` : ""}${body}
+    <div class="nav"><button type="button" class="ghost" data-back>이전</button><button type="button" class="primary" data-next ${q.type === "text" ? "" : "disabled"}>다음</button></div>`;
+  qs.appendChild(s);
+  s.addEventListener("change", e => {
+    if (q.type === "many") {
+      const boxes = [...s.querySelectorAll("input:checked")];
+      if (q.max && boxes.length > q.max) e.target.checked = false;
+      ans[q.id] = [...s.querySelectorAll("input:checked")].map(x => x.value);
+      s.querySelector("[data-next]").disabled = ans[q.id].length === 0;
+    } else if (q.type === "pair") {
+      if (e.target.type !== "radio") return;
+      ans[e.target.name] = e.target.value;
+      s.querySelector("[data-next]").disabled = !q.rows.every(r => ans[r.id]);
+    } else if (q.type === "one") {
+      ans[q.id] = e.target.value;
+      s.querySelector("[data-next]").disabled = false;
+    }
+  });
+  if (q.type === "year") s.querySelector("select").addEventListener("change", e => { ans[q.id] = e.target.value; s.querySelector("[data-next]").disabled = !e.target.value; });
+  if (q.text) s.querySelector(`#q_${q.text.id}`).addEventListener("input", e => ans[q.text.id] = e.target.value);
+  if (q.type === "text") s.querySelector("textarea").addEventListener("input", e => ans[q.id] = e.target.value);
+});
+
+const order = () => ["intro", ...Q.filter(q => !q.when || q.when(ans)).map(q => q.id), "email"];
+let cur = "intro";
+function show(id) {
+  document.querySelectorAll("[data-step]").forEach(el => el.hidden = el.dataset.step !== id);
+  cur = id;
+  const o = order(), i = o.indexOf(id), total = o.length - 1;
+  const p = id === "done" || id === "analyzing" ? 1 : Math.max(0, i) / total;
+  document.getElementById("fill").style.width = (p * 100) + "%";
+  document.getElementById("pin").style.left = (p * 100) + "%";
+  const c = document.querySelector(`[data-step="${id}"] [data-count]`);
+  if (c) c.textContent = `${String(i).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+  const h = document.querySelector(`[data-step="${id}"] h1, [data-step="${id}"] h2`);
+  if (h && id !== "intro") { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+document.addEventListener("click", e => {
+  const o = order(), i = o.indexOf(cur);
+  if (e.target.closest("[data-next]")) show(o[i + 1]);
+  if (e.target.closest("[data-back]")) show(o[i - 1]);
+});
+
+// Apps Script 웹 앱 주소 (배포 뒤 붙여 넣기). 응답은 내 Google Drive의 시트에 쌓인다
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbx7kId5xcCOkMkjevSWvfR6pSROJWFwOfFxJ7WXqppALwj6xO5iK6Y0LAaU6WJZFmM0Jw/exec";
+const VERSION = "v11";
+// 같은 제출은 같은 id로만 보낸다 (재시도해도 시트에 한 줄)
+const SUBMIT_ID = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
+let submitted = false, payload = null;
+async function send() {
+  // text/plain이면 preflight 없이 Apps Script로 바로 간다
+  const res = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+  const out = await res.json();
+  if (!out.ok) throw new Error(out.error || "failed");
+  return out;
+}
+// 결과 화면은 바로 띄우고, 전송은 뒤에서 몇 번까지 다시 시도한다 (Apps Script 첫 응답이 느림)
+async function sendInBackground() {
+  const note = document.getElementById("sendNote");
+  note.textContent = "결과를 메일로 보내는 중입니다…";
+  for (const wait of [0, 2000, 5000]) {
+    await new Promise(r => setTimeout(r, wait));
+    try {
+      const out = await send();
+      note.textContent = out.dup ? "이 이메일로는 이미 응답을 받았어요. 처음 응답 때 보낸 결과 메일을 확인해 주세요." : `${payload.email}로 같은 결과를 보냈어요. 메일이 안 보이면 스팸함을 확인해 주세요.`;
+      return;
+    } catch (_) {}
+  }
+  note.innerHTML = '전송이 되지 않았어요. <button type="button" class="ghost" id="retry" style="padding:4px 10px">다시 보내기</button>';
+  document.getElementById("retry").onclick = sendInBackground;
+}
+
+document.getElementById("f").addEventListener("submit", e => {
+  e.preventDefault();
+  if (submitted) return;
+  const email = document.getElementById("email").value.trim();
+  const err = document.getElementById("emailErr");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = "이메일 주소를 확인해 주세요. 예: name@example.com"; err.hidden = false; return; }
+  if (!document.getElementById("c1").checked) { err.textContent = "결과를 보내려면 필수 동의가 필요합니다."; err.hidden = false; return; }
+  err.hidden = true;
+  submitted = true;
+  const btn = document.getElementById("sendBtn");
+  btn.disabled = true; btn.textContent = "보냈습니다";
+  const consentMarketing = document.getElementById("c2").checked;
+  const A = answerOf({ ...ans, consentMarketing }), r = A.r;
+  payload = { ...ans, id: SUBMIT_ID, email, consentMarketing, start: r.n, next: r.next,
+    src: new URLSearchParams(location.search).get("src") || "", version: VERSION, hp: document.getElementById("hp").value };
+  const el = id => document.getElementById(id);
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  el("rRead").textContent = A.read;
+  el("rMap").innerHTML = [0, 1, 2, 3].map(k => `<li class="${k === r.n ? "now" : k === r.next ? "next" : ""}"><span class="k">시작점 ${k}</span>${START[k].name}</li>`).join("");
+  el("rTitle").innerHTML = `시작점 ${r.n}. <mark>${esc(START[r.n].name)}</mark>`;
+  el("rWho").textContent = START[r.n].who;
+  el("rList").innerHTML = A.items.map((s, i) => `<li><span class="n">${i + 1}</span><div><b>${esc(s[0])}</b><p>${esc(s[1])}</p></div></li>`).join("");
+  el("rWorries").hidden = !A.worries.length;
+  el("rWorries").insertAdjacentHTML("beforeend", A.worries.map(w => `<div class="w"><b>${esc(w.h)}</b><p>${esc(w.t)}</p><span class="ch">${esc(w.ch)}</span></div>`).join(""));
+  el("rCtaT").textContent = A.cta[0];
+  el("rCtaP").textContent = A.cta[1];
+  // 구매 링크는 결과 메일에만 (화면에는 안 둠)
+  el("restart").hidden = true; // 한 번 보내면 끝
+  // 분석 중 약 4초: 그동안 전송은 뒤에서 이미 돈다
+  const steps = [...el("aSteps").children];
+  show("analyzing");
+  steps.forEach((li, k) => setTimeout(() => { if (k) steps[k - 1].classList.replace("on", "ok"); li.classList.add("on"); }, k * 1300));
+  setTimeout(() => show("done"), 4000);
+  sendInBackground();
+});
+document.getElementById("restart").addEventListener("click", () => {
+  document.getElementById("f").reset();
+  Object.keys(ans).forEach(k => delete ans[k]);
+  document.querySelectorAll("[data-next]").forEach(b => { if (!b.closest('[data-step="intro"]') && !b.closest('[data-step="note"]') && !b.closest('[data-step="why"]')) b.disabled = true; });
+  show("intro");
+});
+show("intro");
+</script>
+
+</body></html>

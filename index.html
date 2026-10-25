@@ -251,7 +251,7 @@ document.addEventListener("click", e => {
 });
 
 // Apps Script 웹 앱 주소 (배포 뒤 붙여 넣기). 응답은 내 Google Drive의 시트에 쌓인다
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbx7kId5xcCOkMkjevSWvfR6pSROJWFwOfFxJ7WXqppALwj6xO5iK6Y0LAaU6WJZFmM0Jw/exec";
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbwzgA1--hWlq4D9kkoqDYqAv81a5Q0oeJRMg5Bu5zeoMwWd3aLDgVfC42bnT4vUnfXD/exec";
 const VERSION = "v11";
 // 같은 제출은 같은 id로만 보낸다 (재시도해도 시트에 한 줄)
 const SUBMIT_ID = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);

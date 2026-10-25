@@ -166,6 +166,7 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
 </div>
 
+<script src="endpoint.js"></script>
 <script src="rules.js"></script>
 <script>
 // 답을 만드는 규칙(START, startOf, answerOf 등)은 rules.js. Apps Script도 같은 파일을 쓴다
@@ -251,7 +252,6 @@ document.addEventListener("click", e => {
 });
 
 // Apps Script 웹 앱 주소 (배포 뒤 붙여 넣기). 응답은 내 Google Drive의 시트에 쌓인다
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbwiwdOdNAgW_x95z6XIPLhk_M_68Fao6yIuW5za8etWOUqMd6hH07o24nepQn_gIY62/exec";
 const VERSION = "v11";
 // 같은 제출은 같은 id로만 보낸다 (재시도해도 시트에 한 줄)
 const SUBMIT_ID = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);

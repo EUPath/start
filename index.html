@@ -232,13 +232,31 @@ Q.forEach(q => {
   if (q.type === "text") s.querySelector("textarea").addEventListener("input", e => ans[q.id] = e.target.value);
 });
 // 선택지 탭은 label→input 연결에 맡기지 않고 직접 처리한다 (Threads 앱 안 브라우저에서 여러 번 눌러야 하던 문제)
+function pick(l) {
+  const i = document.getElementById(l.htmlFor);
+  i.checked = i.type === "radio" ? true : !i.checked;
+  i.dispatchEvent(new Event("change", { bubbles: true }));
+}
 qs.addEventListener("click", e => {
   const l = e.target.closest(".opt label");
   if (!l) return;
   e.preventDefault();
-  const i = document.getElementById(l.htmlFor);
-  i.checked = i.type === "radio" ? true : !i.checked;
-  i.dispatchEvent(new Event("change", { bubbles: true }));
+  pick(l);
+});
+// 폰: 손가락이 살짝 움직이면 브라우저가 탭을 스크롤로 취소한다 (폰 진단: 14번 중 3번). 손가락을 뗀 자리가 12px 안이면 직접 고른다
+let touch0 = null;
+qs.addEventListener("touchstart", e => {
+  const t = e.touches[0];
+  touch0 = { x: t.clientX, y: t.clientY, l: e.target.closest(".opt label") };
+}, { passive: true });
+qs.addEventListener("touchend", e => {
+  const s = touch0; touch0 = null;
+  if (!s || !s.l || e.changedTouches.length !== 1) return;
+  const t = e.changedTouches[0];
+  if (Math.hypot(t.clientX - s.x, t.clientY - s.y) > 12) return;
+  e.preventDefault(); // 뒤따르는 click을 막아 두 번 바뀌지 않게
+  pick(s.l);
+  window.dbgPick && window.dbgPick();
 });
 
 const order = () => ["intro", ...Q.filter(q => !q.when || q.when(ans)).map(q => q.id), "email"];
@@ -348,12 +366,13 @@ document.getElementById("restart").addEventListener("click", () => {
 show("intro");
 // ?debug=1: 폰에서 탭이 어디서 끊기는지 화면 아래에 센다 (down=손가락 닿음, up=뗌, cancel=브라우저가 스크롤로 가져감, click=선택 처리됨)
 if (new URLSearchParams(location.search).has("debug")) {
-  const box = document.createElement("div"), n = { down: 0, up: 0, cancel: 0, click: 0 };
+  const box = document.createElement("div"), n = { down: 0, up: 0, cancel: 0, click: 0, pick: 0 };
   box.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;background:#000;color:#fff;font:13px/1.5 monospace;padding:8px;border-radius:8px;z-index:9;pointer-events:none";
   document.body.appendChild(box);
-  const draw = () => box.textContent = `build tap2 · down ${n.down} · up ${n.up} · cancel ${n.cancel} · click ${n.click}`;
+  const draw = () => box.textContent = `build tap3 · down ${n.down} · cancel ${n.cancel} · click ${n.click} · pick ${n.pick}`;
   [["pointerdown", "down"], ["pointerup", "up"], ["pointercancel", "cancel"], ["click", "click"]].forEach(([ev, k]) =>
     document.addEventListener(ev, e => { if (e.target.closest(".opt")) { n[k]++; draw(); } }, true));
+  window.dbgPick = () => { n.pick++; draw(); };
   draw();
 }
 </script>

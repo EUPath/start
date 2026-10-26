@@ -346,6 +346,16 @@ document.getElementById("restart").addEventListener("click", () => {
   show("intro");
 });
 show("intro");
+// ?debug=1: 폰에서 탭이 어디서 끊기는지 화면 아래에 센다 (down=손가락 닿음, up=뗌, cancel=브라우저가 스크롤로 가져감, click=선택 처리됨)
+if (new URLSearchParams(location.search).has("debug")) {
+  const box = document.createElement("div"), n = { down: 0, up: 0, cancel: 0, click: 0 };
+  box.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;background:#000;color:#fff;font:13px/1.5 monospace;padding:8px;border-radius:8px;z-index:9;pointer-events:none";
+  document.body.appendChild(box);
+  const draw = () => box.textContent = `build tap2 · down ${n.down} · up ${n.up} · cancel ${n.cancel} · click ${n.click}`;
+  [["pointerdown", "down"], ["pointerup", "up"], ["pointercancel", "cancel"], ["click", "click"]].forEach(([ev, k]) =>
+    document.addEventListener(ev, e => { if (e.target.closest(".opt")) { n[k]++; draw(); } }, true));
+  draw();
+}
 </script>
 
 </body></html>

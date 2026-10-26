@@ -247,7 +247,7 @@ function show(id) {
   track(id);
 }
 // 단계마다 한 번씩 방문 신호 (시트 `방문` 탭). 어느 질문에서 그만두는지, Threads 앱 안 브라우저인지 본다
-const VID = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
+const VID = Math.random().toString(36).slice(2, 8); // 시트에서 눈으로 구분할 만큼만 (6글자)
 const APP = /Barcelona/i.test(navigator.userAgent) ? "threads" : /Instagram/i.test(navigator.userAgent) ? "instagram" : /FBAN|FBAV/.test(navigator.userAgent) ? "facebook" : /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop";
 const tracked = new Set();
 function track(ev) {

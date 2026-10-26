@@ -10,7 +10,8 @@
   color-scheme: light;
 }
 [hidden]:not([hidden=until-found i]) { display: none !important; }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, label, button { touch-action: manipulation; } /* 두 번 탭 확대 대기 없이 바로 눌림 */
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
 body { margin: 0; background: #FFFFFF; color: var(--ink); font-family: "Pretendard", "Montserrat", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   font-size: 17px; line-height: 1.85; padding: max(40px, env(safe-area-inset-top)) 16px max(64px, env(safe-area-inset-bottom)); }
@@ -43,8 +44,9 @@ h1:focus, h2:focus { outline: none; } /* 화면이 바뀔 때 제목에 focus를
 .opts { display: flex; flex-direction: column; }
 .opt { position: relative; border-bottom: 1px solid var(--line); }
 .opt:first-child { border-top: 1px solid var(--line); }
-.opt input { position: absolute; opacity: 0; inset: 0; }
+.opt input { position: absolute; opacity: 0; inset: 0; pointer-events: none; } /* 탭은 언제나 줄 전체(label)가 받는다 */
 .opt label { display: flex; gap: 14px; align-items: center; padding: 13px 2px; cursor: pointer; line-height: 1.5; }
+.opt label:active { background: #F2F2F2; } /* 누른 순간 바로 보이게 */
 .opt label::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--grey); }
 .opt input[type="checkbox"] + label::before { border-radius: 3px; }
 .opt input:checked + label { font-weight: 700; }
@@ -177,7 +179,7 @@ const Q = [
     rows: [{ id: "field", label: "공부하고 싶은 분야", o: ["신경과학", "인지과학·심리", "생명과학", "공학·AI", "아직 넓게 보고 있어요"] },
            { id: "major", label: "지금(또는 마지막) 전공", o: ["생명·의약", "심리·인지", "공학·컴퓨터", "물리·화학·수학", "인문·사회", "기타"] }],
     text: { id: "majorName", label: "정확한 전공 이름", hint: "영어 표기를 알면 함께 적어 주세요.", ph: "예: 생명과학과 (Life Science)" } },
-  { id: "why", t: "분야를 바꾸고 싶은 이유를 한 줄로 적어 주세요", hint: "지금 전공과 다른 분야를 고른 분께만 묻습니다. 선택입니다.", type: "text", ph: "예: 학부 때 뇌 수업을 듣고 계속 관심이 갔어요", when: a => a.major && a.field && !sameArea(a.major, a.field) },
+  { id: "why", t: "분야를 바꾸고 싶은 이유를 한 줄로 적어 주세요 (선택)", hint: "지금 전공과 다른 분야를 고른 분께만 묻습니다.", type: "text", ph: "예: 학부 때 뇌 수업을 듣고 계속 관심이 갔어요", when: a => a.major && a.field && !sameArea(a.major, a.field) },
   { id: "lab", t: "연구해 본 경험은 어느 정도인가요?", type: "one", o: ["아직 없어요", "수업 프로젝트 정도", "연구실 6개월 미만", "연구실 6개월~1년", "연구실 1년 이상", "논문이나 학회 발표까지"] },
   { id: "phdBase", t: "석사 논문 주제가 가고 싶은 분야와 이어지나요?", hint: "박사를 생각하는 분께만 묻습니다.", type: "one", o: ["거의 같아요", "일부 이어져요", "거의 달라요", "석사가 없어요"], when: a => a.goal === "박사" || a.goal === "둘 다 생각 중" },
   { id: "country", t: "관심 있는 나라를 모두 골라 주세요", type: "many", o: ["독일", "이탈리아", "네덜란드", "스위스", "오스트리아", "프랑스", "북유럽", "영국", "미국", "호주", "기타", "아직 모르겠어요"] },
@@ -186,7 +188,7 @@ const Q = [
   { id: "worry", t: "지금 가장 막막한 것을 두 개까지 골라 주세요", type: "many", max: 2, o: ["어디서부터 시작할지", "나에게 맞는 학교나 연구실 찾기", "지원 서류", "교수님께 연락하기", "돈", "영어", "가족이나 주변 설득"] },
   { id: "first", t: "유학 생각이 문득 났을 때, 보통 먼저 하는 것을 모두 골라 주세요", type: "many", o: ["네이버나 구글에 검색해요", "유튜브를 찾아봐요", "ChatGPT 같은 AI에게 물어봐요", "커뮤니티나 카페에 글을 찾아봐요", "Threads나 인스타그램을 봐요", "아는 사람에게 연락해요", "생각만 하고 넘어가요"] },
   { id: "help", t: "도움을 받는다면 어떤 방식이 가장 편한가요?", type: "one", o: ["정리된 자료를 혼자 읽고 싶어요", "내 상황에 맞춘 답을 글로 받고 싶어요", "직접 대화하며 바로 묻고 싶어요", "웬만한 건 혼자 찾아볼 수 있어요"] },
-  { id: "note", t: "지금 고민을 한두 줄로 적어 주세요", hint: "선택입니다. 적어 주신 고민은 모아서 가이드북과 앞으로의 안내를 만드는 데 씁니다.", type: "text", ph: "예: 생물학 전공인데 신경과학 박사가 가능할지 모르겠어요" }
+  { id: "note", t: "지금 고민을 한두 줄로 적어 주세요 (선택)", hint: "적어 주신 고민은 모아서 가이드북과 앞으로의 안내를 만드는 데 씁니다.", type: "text", ph: "예: 생물학 전공인데 신경과학 박사가 가능할지 모르겠어요" }
 ];
 
 const qs = document.getElementById("qs");
@@ -243,7 +245,7 @@ function show(id) {
   if (c) c.textContent = `${String(i).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
   const h = document.querySelector(`[data-step="${id}"] h1, [data-step="${id}"] h2`);
   if (h && id !== "intro") { h.tabIndex = -1; h.focus({ preventScroll: true }); }
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo(0, 0); // 부드러운 스크롤 중에 누르면 폰에서 탭이 스크롤 멈춤으로 먹혀서 바로 올린다
   track(id);
 }
 // 단계마다 한 번씩 방문 신호 (시트 `방문` 탭). 어느 질문에서 그만두는지, Threads 앱 안 브라우저인지 본다

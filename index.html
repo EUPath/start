@@ -56,7 +56,7 @@ h1:focus, h2:focus { outline: none; } /* 화면이 바뀔 때 제목에 focus를
 textarea, input[type="email"], input[type="text"], select { width: 100%; font: inherit; color: var(--ink); background: transparent;
   border: 0; border-bottom: 1px solid var(--grey); border-radius: 0; padding: 10px 2px; }
 select { cursor: pointer; }
-textarea { min-height: 96px; resize: vertical; line-height: 1.7; }
+textarea { min-height: 60px; resize: vertical; line-height: 1.7; }
 textarea:focus-visible, input[type="email"]:focus-visible, input[type="text"]:focus-visible, select:focus-visible { outline: none; border-bottom: 2px solid var(--ink); }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.7; color: var(--grey); }
 .check input { margin-top: 6px; accent-color: #000000; }
@@ -201,7 +201,7 @@ Q.forEach(q => {
     const ys = []; for (let y = 2008; y >= 1980; y--) ys.push(y);
     body = `<select id="q_${q.id}"><option value="">선택해 주세요</option>${ys.map(y => `<option>${y}</option>`).join("")}<option value="1979 이전">1979년 이전</option><option value="밝히지 않음">밝히고 싶지 않아요</option></select>`;
   } else if (q.type === "text") {
-    body = `<textarea id="q_${q.id}" placeholder="${q.ph || ""}"></textarea>`;
+    body = `<textarea id="q_${q.id}" rows="2" placeholder="${q.ph || ""}"></textarea>`;
   } else if (q.type === "pair") {
     body = q.rows.map(r => `<p class="row-label">${r.label}</p><div class="opts">${r.o.map((o, i) => `<div class="opt"><input type="radio" name="${r.id}" id="${r.id}_${i}" value="${o}"><label for="${r.id}_${i}">${o}</label></div>`).join("")}</div>`).join("")
       + (q.text ? `<p class="row-label">${q.text.label}</p><p class="hint" style="margin:0">${q.text.hint}</p><input type="text" id="q_${q.text.id}" placeholder="${q.text.ph}">` : "");
@@ -210,7 +210,7 @@ Q.forEach(q => {
     body = `<div class="opts">${q.o.map((o, i) => `<div class="opt"><input type="${kind}" name="${q.id}" id="${q.id}_${i}" value="${o}"><label for="${q.id}_${i}">${o}</label></div>`).join("")}</div>`;
   }
   s.innerHTML = `<span class="step-no" data-count></span><h2>${q.t}</h2>${q.hint ? `<p class="hint">${q.hint}</p>` : ""}${body}
-    <div class="nav"><button type="button" class="ghost" data-back>이전</button><button type="button" class="primary" data-next ${q.type === "text" ? "" : "disabled"}>다음</button></div>`;
+    <div class="nav"><button type="button" class="ghost" data-back>이전</button><button type="button" class="primary" data-next ${q.type === "text" ? "" : "disabled"}>${q.type === "text" ? "건너뛰기" : "다음"}</button></div>`;
   qs.appendChild(s);
   s.addEventListener("change", e => {
     if (q.type === "many") {
@@ -229,7 +229,11 @@ Q.forEach(q => {
   });
   if (q.type === "year") s.querySelector("select").addEventListener("change", e => { ans[q.id] = e.target.value; s.querySelector("[data-next]").disabled = !e.target.value; });
   if (q.text) s.querySelector(`#q_${q.text.id}`).addEventListener("input", e => ans[q.text.id] = e.target.value);
-  if (q.type === "text") s.querySelector("textarea").addEventListener("input", e => ans[q.id] = e.target.value);
+  // 선택 칸: 비어 있으면 "건너뛰기" (방문자 2명이 빈칸 앞에서 그만둠, 2026-10-26)
+  if (q.type === "text") s.querySelector("textarea").addEventListener("input", e => {
+    ans[q.id] = e.target.value;
+    s.querySelector("[data-next]").textContent = e.target.value.trim() ? "다음" : "건너뛰기";
+  });
 });
 // 선택지 탭은 label→input 연결에 맡기지 않고 직접 처리한다 (Threads 앱 안 브라우저에서 여러 번 눌러야 하던 문제)
 function pick(l) {

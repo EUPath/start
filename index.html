@@ -244,6 +244,18 @@ function show(id) {
   const h = document.querySelector(`[data-step="${id}"] h1, [data-step="${id}"] h2`);
   if (h && id !== "intro") { h.tabIndex = -1; h.focus({ preventScroll: true }); }
   window.scrollTo({ top: 0, behavior: "smooth" });
+  track(id);
+}
+// 단계마다 한 번씩 방문 신호 (시트 `방문` 탭). 어느 질문에서 그만두는지, Threads 앱 안 브라우저인지 본다
+const VID = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
+const APP = /Barcelona/i.test(navigator.userAgent) ? "threads" : /Instagram/i.test(navigator.userAgent) ? "instagram" : /FBAN|FBAV/.test(navigator.userAgent) ? "facebook" : /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop";
+const tracked = new Set();
+function track(ev) {
+  if (tracked.has(ev)) return;
+  tracked.add(ev);
+  const body = JSON.stringify({ ev, vid: VID, app: APP, src: (new URLSearchParams(location.search).get("src") || "").slice(0, 40) });
+  try { if (navigator.sendBeacon && navigator.sendBeacon(ENDPOINT, body)) return; } catch (_) {}
+  fetch(ENDPOINT, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=utf-8" }, body }).catch(() => {});
 }
 document.addEventListener("click", e => {
   const o = order(), i = o.indexOf(cur);
@@ -271,10 +283,12 @@ async function sendInBackground() {
     await new Promise(r => setTimeout(r, wait));
     try {
       const out = await send();
+      track("sent");
       note.textContent = out.dup ? "이 이메일로는 이미 응답을 받았어요. 처음 응답 때 보낸 결과 메일을 확인해 주세요." : `${payload.email}로 같은 결과를 보냈어요. 메일이 안 보이면 스팸함을 확인해 주세요.`;
       return;
     } catch (_) {}
   }
+  track("fail");
   note.innerHTML = '전송이 되지 않았어요. <button type="button" class="ghost" id="retry" style="padding:4px 10px">다시 보내기</button>';
   document.getElementById("retry").onclick = sendInBackground;
 }

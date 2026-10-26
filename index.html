@@ -49,7 +49,7 @@ h1:focus, h2:focus { outline: none; } /* 화면이 바뀔 때 제목에 focus를
 .opt label:active { background: #F2F2F2; } /* 누른 순간 바로 보이게 */
 .opt label::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--grey); }
 .opt input[type="checkbox"] + label::before { border-radius: 3px; }
-.opt input:checked + label { font-weight: 700; }
+.opt input:checked + label { font-weight: 700; background: #E3F3FB; } /* 고른 줄은 연한 파랑 (폰에서 눌렸는지 바로 보이게) */
 .opt input:checked + label::before { border-color: var(--ink); background: var(--ink); box-shadow: inset 0 0 0 3px #FFFFFF; }
 .opt input:focus-visible + label { outline: 2px solid var(--blue); outline-offset: 2px; }
 
@@ -230,6 +230,15 @@ Q.forEach(q => {
   if (q.type === "year") s.querySelector("select").addEventListener("change", e => { ans[q.id] = e.target.value; s.querySelector("[data-next]").disabled = !e.target.value; });
   if (q.text) s.querySelector(`#q_${q.text.id}`).addEventListener("input", e => ans[q.text.id] = e.target.value);
   if (q.type === "text") s.querySelector("textarea").addEventListener("input", e => ans[q.id] = e.target.value);
+});
+// 선택지 탭은 label→input 연결에 맡기지 않고 직접 처리한다 (Threads 앱 안 브라우저에서 여러 번 눌러야 하던 문제)
+qs.addEventListener("click", e => {
+  const l = e.target.closest(".opt label");
+  if (!l) return;
+  e.preventDefault();
+  const i = document.getElementById(l.htmlFor);
+  i.checked = i.type === "radio" ? true : !i.checked;
+  i.dispatchEvent(new Event("change", { bubbles: true }));
 });
 
 const order = () => ["intro", ...Q.filter(q => !q.when || q.when(ans)).map(q => q.id), "email"];

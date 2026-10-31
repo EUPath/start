@@ -317,7 +317,7 @@ async function sendInBackground() {
     try {
       const out = await send();
       track("sent");
-      note.textContent = out.dup ? "이 이메일로는 이미 응답을 받았어요. 처음 응답 때 보낸 결과 메일을 확인해 주세요." : `${payload.email}로 같은 결과를 보냈어요. 메일이 안 보이면 스팸함을 확인해 주세요.`;
+      note.textContent = out.dup ? "이 이메일로는 이미 응답을 받았어요. 처음 응답 때 보낸 결과 메일을 확인해 주세요. 안 보이면 스팸함도 확인해 주세요." : `${payload.email}로 같은 결과를 보냈어요. 메일이 안 보이면 스팸함을 확인해 주세요.`;
       return;
     } catch (_) {}
   }
